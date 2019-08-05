@@ -30,7 +30,7 @@ steps:
 - task: ArchiveFiles@2
   displayName: 'Archive x64'
   inputs:
-    rootFolderOrFile: '$(Build.Repository.LocalPath)/Bin/Release-x64/RDM-Converter.exe'
+    rootFolderOrFile: '$(Build.Repository.LocalPath)/RDM-Converter/Bin/Release-x64/RDM-Converter.exe'
     includeRootFolder: false
     archiveFile: '$(Build.ArtifactStagingDirectory)/RDM-Converter-x64.zip'
 - task: GitHubRelease@0
