@@ -1,9 +1,11 @@
 #pragma once
+#include <stdint.h>
+#include <string>
 
 template <class type> class Triangle
 {
   public:
-    std::string toOBJ(bool normals, bool textures)
+	  std::string toOBJ(bool normals, bool textures)
     {
         // + 1 -> (zero-based numbering in RDM, one-based numbering in OBJ)
         if (normals)

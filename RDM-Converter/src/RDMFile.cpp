@@ -1,5 +1,6 @@
-#include "pch.h"
 #include "RDMFile.h"
+#include "Log.h"
+#include <fstream>
 
 RDMFile::RDMFile(std::filesystem::path inputPath)
 {

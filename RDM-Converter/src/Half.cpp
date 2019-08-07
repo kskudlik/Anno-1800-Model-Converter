@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "Half.h"
 
 float Half::halfToFloat(uint16_t half)

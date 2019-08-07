@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "VertexData.h"
 
 // let´s just make sure i don´t mess the sizes up anytime soon

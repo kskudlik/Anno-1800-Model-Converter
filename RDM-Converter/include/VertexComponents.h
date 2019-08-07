@@ -1,5 +1,6 @@
 #pragma once
 #include "Half.h"
+#include <string>
 
 template <class type> struct GeometricVertex {
   private:

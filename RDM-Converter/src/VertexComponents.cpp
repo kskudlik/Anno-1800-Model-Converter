@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "VertexComponents.h"
 
 template <> std::string GeometricVertex<uint16_t>::toOBJ()

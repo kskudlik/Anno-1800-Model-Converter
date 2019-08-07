@@ -33,7 +33,7 @@
     <ClCompile Include="src\RDMFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\pch.cpp">
+    <ClCompile Include="src\Log.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -64,9 +64,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\RDMFile.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
