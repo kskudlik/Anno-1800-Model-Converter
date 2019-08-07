@@ -8,6 +8,9 @@ variables:
   buildConfiguration: 'Release'
   appxPackageDir: '$(build.artifactStagingDirectory)\AppxPackages\\'
 steps:
+- checkout: self
+  submodules: recursive
+
 - task: NuGetToolInstaller@1
 
 - task: NuGetCommand@2
@@ -34,14 +37,11 @@ steps:
     includeRootFolder: false
     archiveFile: '$(Build.ArtifactStagingDirectory)/RDM-Converter-x64.zip'
 - task: GitHubRelease@0
+  displayName: 'GitHub release (create)'
   inputs:
     gitHubConnection: 'github connect'
-    repositoryName: 'kskudlik/Anno-1800-Model-Converter'
+    repositoryName: '$(Build.Repository.Name)'
     action: 'create'
     target: '$(Build.SourceVersion)'
-    tagSource: 'manual'
-    tag: $(Build.BuildNumber)
-    assets: $(Build.ArtifactStagingDirectory)/*
-    releaseNotesSource: 'input'
+    tagSource: 'auto'
     isDraft: true
-    isPreRelease: true
