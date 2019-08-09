@@ -1,6 +1,14 @@
 #include "RDMFile.h"
 #include "Log.h"
+#include "VertexData.h"
+
 #include <fstream>
+#include <variant>
+
+template <class... Ts> struct overloaded : Ts... {
+    using Ts::operator()...;
+};
+template <class... Ts> overloaded(Ts...)->overloaded<Ts...>;
 
 RDMFile::RDMFile(std::filesystem::path inputPath)
 {
@@ -10,14 +18,14 @@ RDMFile::RDMFile(std::filesystem::path inputPath)
         RDM.seekg(0, RDM.end);
         uint64_t length = RDM.tellg();
         RDM.seekg(0, RDM.beg);
-        file = new char[length];
-        RDM.read(file, length);
+        file.reset(new char[length]);
+        RDM.read(file.get(), length);
         RDM.close();
 
         if (length < 32)
             throw FileError(inputPath, "Smaller than 32 Bytes");
 
-        uint32_t offsetToOffsets = *(uint32_t*)&file[32];
+        uintptr_t offsetToOffsets = *(uint32_t*)&file[32];
 
         if (length - 16 < offsetToOffsets)
             throw FileError(inputPath, "Unknown File Structure");
@@ -35,25 +43,45 @@ RDMFile::RDMFile(std::filesystem::path inputPath)
         trianglesSize  = *(unsigned long*)&file[offsetToTriangles - 4];
 
         switch (verticesSize) {
-            case (P4h):
-            case (P4h_T2h_C4c):
-            case (P4h_N4b_T2h_I4b):
-            case (P4h_N4b_G4b_B4b_T2h):
-            case (P4h_N4b_G4b_B4b_T2h_I4b):
-            case (P4h_N4b_G4b_B4b_T2h_C4b_C4b):
-            case (P4h_N4b_G4b_B4b_T2h_I4b_I4b_I4b_I4b_W4b_W4b_W4b_W4b):
-            case (P3f_N3b_37_T2f):
-            case (P3f_N3b_41_T2f):
-            case (P3f_N3b_45_T2f):
-            case (P3f_N3b_49_T2f):
-                vertexFormat = (VertexFormat)verticesSize;
-                break;
+            case sizeof(P4h): {
+                vertices = reinterpret_cast<P4h*>(&file[offsetToVertices]);
+            } break;
+            case sizeof(P4h_T2h_C4c): {
+                vertices = reinterpret_cast<P4h_T2h_C4c*>(&file[offsetToVertices]);
+            } break;
+            case sizeof(P4h_N4b_T2h_I4b): {
+                vertices = reinterpret_cast<P4h_T2h_C4c*>(&file[offsetToVertices]);
+            } break;
+            case sizeof(P4h_N4b_G4b_B4b_T2h): {
+                vertices = reinterpret_cast<P4h_N4b_G4b_B4b_T2h*>(&file[offsetToVertices]);
+            } break;
+            case sizeof(P4h_N4b_G4b_B4b_T2h_I4b): {
+                vertices = reinterpret_cast<P4h_N4b_G4b_B4b_T2h_I4b*>(&file[offsetToVertices]);
+            } break;
+            case sizeof(P4h_N4b_G4b_B4b_T2h_C4b_C4b): {
+                vertices = reinterpret_cast<P4h_N4b_G4b_B4b_T2h_C4b_C4b*>(&file[offsetToVertices]);
+            } break;
+            case sizeof(P4h_N4b_G4b_B4b_T2h_I4b_I4b_I4b_I4b_W4b_W4b_W4b_W4b): {
+                vertices = reinterpret_cast<P4h_N4b_G4b_B4b_T2h_I4b_I4b_I4b_I4b_W4b_W4b_W4b_W4b*>(
+                    &file[offsetToVertices]);
+            } break;
+            case sizeof(P3f_N3b_37_T2f): {
+                vertices = reinterpret_cast<P3f_N3b_37_T2f*>(&file[offsetToVertices]);
+            } break;
+            case sizeof(P3f_N3b_41_T2f): {
+                vertices = reinterpret_cast<P3f_N3b_41_T2f*>(&file[offsetToVertices]);
+            } break;
+            case sizeof(P3f_N3b_45_T2f): {
+                vertices = reinterpret_cast<P3f_N3b_45_T2f*>(&file[offsetToVertices]);
+            } break;
+            case sizeof(P3f_N3b_49_T2f): {
+                vertices = reinterpret_cast<P3f_N3b_49_T2f*>(&file[offsetToVertices]);
+            } break;
             default:
                 throw UnsupportedVertexFormat(verticesSize, trianglesSize);
                 break;
         }
-        // data format doesn't matter yet.. just "default" template for now
-        vertices  = (VertexData<P4h_N4b_G4b_B4b_T2h>*)&file[offsetToVertices];
+
         triangles = (Triangle<uint16_t>*)&file[offsetToTriangles];
 
     } else {
@@ -62,94 +90,31 @@ RDMFile::RDMFile(std::filesystem::path inputPath)
 }
 RDMFile::~RDMFile()
 {
-
     spdlog::trace("char* alloc file deleted");
-    delete[] file;
 }
 std::string RDMFile::verticesToOBJ()
 {
     std::string out;
-    if (vertexFormat == P4h) {
-        VertexData<P4h>* vertices = (VertexData<P4h>*)this->vertices;
-        for (uint32_t i = 0; i < verticesCount; i++) {
-            out += vertices[i].v.toOBJ();
-        }
-    } else if (vertexFormat == P4h_T2h_C4c) {
-        VertexData<P4h_T2h_C4c>* vertices = (VertexData<P4h_T2h_C4c>*)this->vertices;
-        for (uint32_t i = 0; i < verticesCount; i++) {
-            out += vertices[i].v.toOBJ();
-            out += vertices[i].vt.toOBJ();
-        }
-    } else if (vertexFormat == P4h_N4b_T2h_I4b) {
-        VertexData<P4h_N4b_T2h_I4b>* vertices = (VertexData<P4h_N4b_T2h_I4b>*)this->vertices;
-        for (uint32_t i = 0; i < verticesCount; i++) {
-            out += vertices[i].v.toOBJ();
-            out += vertices[i].vn.toOBJ();
-            out += vertices[i].vt.toOBJ();
-        }
-    } else if (vertexFormat == P4h_N4b_G4b_B4b_T2h) {
-        VertexData<P4h_N4b_G4b_B4b_T2h>* vertices =
-            (VertexData<P4h_N4b_G4b_B4b_T2h>*)this->vertices;
-        for (uint32_t i = 0; i < verticesCount; i++) {
-            out += vertices[i].v.toOBJ();
-            out += vertices[i].vn.toOBJ();
-            out += vertices[i].vt.toOBJ();
-        }
-    } else if (vertexFormat == P4h_N4b_G4b_B4b_T2h_I4b) {
-        VertexData<P4h_N4b_G4b_B4b_T2h_I4b>* vertices =
-            (VertexData<P4h_N4b_G4b_B4b_T2h_I4b>*)this->vertices;
-        for (uint32_t i = 0; i < verticesCount; i++) {
-            out += vertices[i].v.toOBJ();
-            out += vertices[i].vn.toOBJ();
-            out += vertices[i].vt.toOBJ();
-        }
-    } else if (vertexFormat == P4h_N4b_G4b_B4b_T2h_C4b_C4b) {
-        VertexData<P4h_N4b_G4b_B4b_T2h_C4b_C4b>* vertices =
-            (VertexData<P4h_N4b_G4b_B4b_T2h_C4b_C4b>*)this->vertices;
-        for (uint32_t i = 0; i < verticesCount; i++) {
-            out += vertices[i].v.toOBJ();
-            out += vertices[i].vn.toOBJ();
-            out += vertices[i].vt.toOBJ();
-        }
-    } else if (vertexFormat == P4h_N4b_G4b_B4b_T2h_I4b_I4b_I4b_I4b_W4b_W4b_W4b_W4b) {
-        VertexData<P4h_N4b_G4b_B4b_T2h_I4b_I4b_I4b_I4b_W4b_W4b_W4b_W4b>* vertices =
-            (VertexData<P4h_N4b_G4b_B4b_T2h_I4b_I4b_I4b_I4b_W4b_W4b_W4b_W4b>*)this->vertices;
-        for (uint32_t i = 0; i < verticesCount; i++) {
-            out += vertices[i].v.toOBJ();
-            out += vertices[i].vn.toOBJ();
-            out += vertices[i].vt.toOBJ();
-        }
-    } else if (vertexFormat == P3f_N3b_37_T2f) {
-        VertexData<P3f_N3b_37_T2f>* vertices = (VertexData<P3f_N3b_37_T2f>*)this->vertices;
-        for (uint32_t i = 0; i < verticesCount; i++) {
-            out += vertices[i].v.toOBJ();
-            out += vertices[i].vn.toOBJ();
-            out += vertices[i].vt.toOBJ();
-        }
-    } else if (vertexFormat == P3f_N3b_41_T2f) {
-        VertexData<P3f_N3b_41_T2f>* vertices = (VertexData<P3f_N3b_41_T2f>*)this->vertices;
-        for (uint32_t i = 0; i < verticesCount; i++) {
-            out += vertices[i].v.toOBJ();
-            out += vertices[i].vn.toOBJ();
-            out += vertices[i].vt.toOBJ();
-        }
-    } else if (vertexFormat == P3f_N3b_45_T2f) {
-        VertexData<P3f_N3b_45_T2f>* vertices = (VertexData<P3f_N3b_45_T2f>*)this->vertices;
-        for (uint32_t i = 0; i < verticesCount; i++) {
-            out += vertices[i].v.toOBJ();
-            out += vertices[i].vn.toOBJ();
-            out += vertices[i].vt.toOBJ();
-        }
-    } else if (vertexFormat == P3f_N3b_49_T2f) {
-        VertexData<P3f_N3b_49_T2f>* vertices = (VertexData<P3f_N3b_49_T2f>*)this->vertices;
-        for (uint32_t i = 0; i < verticesCount; i++) {
-            out += vertices[i].v.toOBJ();
-            out += vertices[i].vn.toOBJ();
-            out += vertices[i].vt.toOBJ();
-        }
-    } else {
-        throw std::logic_error("Should not be called when it's a UnsupportedVertexFormat");
-    }
+
+    std::visit(overloaded{[this, &out](P4h* vertices) {
+                              for (uint32_t i = 0; i < verticesCount; i++) {
+                                  out += vertices[i].v.toOBJ();
+                              }
+                          },
+                          [this, &out](P4h_T2h_C4c* vertices) {
+                              for (uint32_t i = 0; i < verticesCount; i++) {
+                                  out += vertices[i].v.toOBJ();
+                                  out += vertices[i].vt.toOBJ();
+                              }
+                          },
+                          [this, &out](auto* vertices) {
+                              for (uint32_t i = 0; i < verticesCount; i++) {
+                                  out += vertices[i].v.toOBJ();
+                                  out += vertices[i].vn.toOBJ();
+                                  out += vertices[i].vt.toOBJ();
+                              }
+                          }},
+               vertices);
 
     return out;
 }
@@ -158,9 +123,9 @@ std::string RDMFile::trianglesToOBJ()
     std::string out;
     bool        normals  = true;
     bool        textures = true;
-    if (vertexFormat == P4h_T2h_C4c || verticesSize == P4h)
+    if (std::holds_alternative<P4h_T2h_C4c*>(vertices) || std::holds_alternative<P4h*>(vertices))
         normals = false;
-    if (vertexFormat == P4h)
+    if (std::holds_alternative<P4h*>(vertices))
         textures = false;
     if (trianglesSize == 4) {
         Triangle<uint32_t>* triangles = (Triangle<uint32_t>*)this->triangles;
@@ -186,6 +151,6 @@ bool RDMFile::toOBJFile(std::filesystem::path outputPath)
     obj << this->verticesToOBJ();
     obj << this->trianglesToOBJ();
     obj.close();
-	
-    return true; //TODO make this useful...
+
+    return true; // TODO make this useful...
 }

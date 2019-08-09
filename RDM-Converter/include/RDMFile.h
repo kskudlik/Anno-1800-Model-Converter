@@ -1,7 +1,9 @@
 #pragma once
-#include <filesystem>
 #include "Triangle.h"
 #include "VertexData.h"
+
+#include <filesystem>
+#include <variant>
 
 class RDMFile
 {
@@ -48,11 +50,14 @@ class RDMFile
             return path;
         }
     };
-    char*                            file;
-    VertexFormat                     vertexFormat;
-    uint32_t                         verticesSize; // byte size
-    uint32_t                         verticesCount;
-    VertexData<P4h_N4b_G4b_B4b_T2h>* vertices;
+    std::unique_ptr<char[]> file;
+    uint32_t                verticesSize; // byte size
+    uint32_t                verticesCount;
+    std::variant<P4h*, P4h_T2h_C4c*, P4h_N4b_T2h_I4b*, P4h_N4b_G4b_B4b_T2h*,
+                 P4h_N4b_G4b_B4b_T2h_I4b*, P4h_N4b_G4b_B4b_T2h_C4b_C4b*,
+                 P4h_N4b_G4b_B4b_T2h_I4b_I4b_I4b_I4b_W4b_W4b_W4b_W4b*, P3f_N3b_37_T2f*,
+                 P3f_N3b_41_T2f*, P3f_N3b_45_T2f*, P3f_N3b_49_T2f*>
+        vertices;
 
     uint32_t            trianglesSize;  // byte size
     uint32_t            trianglesCount; // actual amount of triangles (COUNT IN RDM/3)
