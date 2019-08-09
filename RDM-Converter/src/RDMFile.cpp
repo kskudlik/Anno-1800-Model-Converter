@@ -50,7 +50,7 @@ RDMFile::RDMFile(std::filesystem::path inputPath)
                 vertices = reinterpret_cast<P4h_T2h_C4c*>(&file[offsetToVertices]);
             } break;
             case sizeof(P4h_N4b_T2h_I4b): {
-                vertices = reinterpret_cast<P4h_T2h_C4c*>(&file[offsetToVertices]);
+                vertices = reinterpret_cast<P4h_N4b_T2h_I4b*>(&file[offsetToVertices]);
             } break;
             case sizeof(P4h_N4b_G4b_B4b_T2h): {
                 vertices = reinterpret_cast<P4h_N4b_G4b_B4b_T2h*>(&file[offsetToVertices]);
