@@ -33,9 +33,9 @@ steps:
 - task: ArchiveFiles@2
   displayName: 'Archive x64'
   inputs:
-    rootFolderOrFile: '$(Build.Repository.LocalPath)/RDM-Converter/Bin/Release-x64/RDM-Converter.exe'
+    rootFolderOrFile: '$(Build.Repository.LocalPath)/Console-Application/Bin/Release-x64/Anno-1800-Model-Converter.exe'
     includeRootFolder: false
-    archiveFile: '$(Build.ArtifactStagingDirectory)/RDM-Converter-x64.zip'
+    archiveFile: '$(Build.ArtifactStagingDirectory)/Anno-1800-Model-Converter-x64.zip'
 - task: GitHubRelease@0
   displayName: 'GitHub release (create)'
   inputs:

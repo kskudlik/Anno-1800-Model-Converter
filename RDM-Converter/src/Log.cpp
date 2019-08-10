@@ -8,7 +8,7 @@ void initSPDLOG(const char* logfile)
     spdlog::set_default_logger(console_logger);
     spdlog::set_pattern("[%^%l%$] %v");
 
-    auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logfile, true);
+    auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logfile,true);
     file_sink->set_pattern("[%Y-%m-%d %T.%e] [%^%l%$] %v");
 
 #if DEBUG == 1

@@ -4,6 +4,6 @@
 
 namespace Half
 {
-float    halfToFloat(uint16_t half);
-uint16_t floatToHalf(float input);
+float    halfToFloat(uint16_t half) noexcept;
+uint16_t floatToHalf(float input) noexcept;
 }; // namespace Half

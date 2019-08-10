@@ -16,22 +16,22 @@ RDMFile::RDMFile(std::filesystem::path inputPath)
     if (RDM) {
 
         RDM.seekg(0, RDM.end);
-        uint64_t length = RDM.tellg();
+        const uint64_t length = RDM.tellg();
         RDM.seekg(0, RDM.beg);
-        file.reset(new char[length]);
+        file = std::make_unique<char[]>(length);
         RDM.read(file.get(), length);
         RDM.close();
 
         if (length < 32)
             throw FileError(inputPath, "Smaller than 32 Bytes");
 
-        uintptr_t offsetToOffsets = *(uint32_t*)&file[32];
+        const uintptr_t offsetToOffsets = *(uint32_t*)&file[32];
 
         if (length - 16 < offsetToOffsets)
             throw FileError(inputPath, "Unknown File Structure");
 
-        uint32_t offsetToVertices  = *(uint32_t*)&file[offsetToOffsets + 12];
-        uint32_t offsetToTriangles = *(uint32_t*)&file[offsetToOffsets + 16];
+        const uint32_t offsetToVertices  = *(uint32_t*)&file[offsetToOffsets + 12];
+        const uint32_t offsetToTriangles = *(uint32_t*)&file[offsetToOffsets + 16];
 
         if (length - 8 <= offsetToVertices || length - 4 <= offsetToTriangles)
             throw FileError(inputPath, "Unknown File Structure");
@@ -88,11 +88,7 @@ RDMFile::RDMFile(std::filesystem::path inputPath)
         throw FileError(inputPath, "Can't open file");
     }
 }
-RDMFile::~RDMFile()
-{
-    spdlog::trace("char* alloc file deleted");
-}
-std::string RDMFile::verticesToOBJ()
+std::string RDMFile::verticesToOBJ() noexcept
 {
     std::string out;
 
@@ -118,6 +114,7 @@ std::string RDMFile::verticesToOBJ()
 
     return out;
 }
+
 std::string RDMFile::trianglesToOBJ()
 {
     std::string out;
@@ -145,7 +142,7 @@ std::string RDMFile::trianglesToOBJ()
 }
 bool RDMFile::toOBJFile(std::filesystem::path outputPath)
 {
-
+    std::filesystem::create_directories(outputPath.parent_path());
     std::ofstream obj;
     obj.open(outputPath);
     obj << this->verticesToOBJ();
@@ -153,4 +150,20 @@ bool RDMFile::toOBJFile(std::filesystem::path outputPath)
     obj.close();
 
     return true; // TODO make this useful...
+}
+void RDMFile::convertDirectoryToOBJ(std::filesystem::path inputDirectory,
+                                    std::filesystem::path outputDirectory)
+{
+    std::filesystem::path outputPathTemp;
+    for (auto& p : std::filesystem::recursive_directory_iterator(inputDirectory)) {
+
+        if (p.path().extension() == ".rdm") {
+            RDMFile RDM(p.path());
+            outputPathTemp = p.path();
+
+            RDM.toOBJFile(outputDirectory
+                          / outputPathTemp.replace_extension(".obj").string().replace(
+                              0, inputDirectory.string().size(), ""));
+        }
+    }
 }

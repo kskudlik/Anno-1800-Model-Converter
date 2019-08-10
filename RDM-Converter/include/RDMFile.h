@@ -9,17 +9,18 @@ class RDMFile
 {
   public:
     RDMFile(std::filesystem::path inputPath);
-    ~RDMFile();
     bool        toOBJFile(std::filesystem::path outputPath);
     std::string trianglesToOBJ();
-    std::string verticesToOBJ();
+    std::string verticesToOBJ() noexcept;
+    static void convertDirectoryToOBJ(std::filesystem::path inputDirectory,
+                                      std::filesystem::path outputDirectory);
 
   private:
     struct UnsupportedVertexFormat : public std::exception {
         unsigned int verticesSize;
         unsigned int trianglesSize;
         UnsupportedVertexFormat(uint32_t vertexSize, uint32_t triangleSize,
-                                const char* msg = "UnsupportedVertexFormat")
+                                const char* msg = "UnsupportedVertexFormat") noexcept
             : std::exception(msg)
             , verticesSize(vertexSize)
             , trianglesSize(triangleSize)
@@ -27,25 +28,25 @@ class RDMFile
         }
 
       public:
-        unsigned int getVertexSize()
+        unsigned int getVertexSize() noexcept
         {
             return verticesSize;
         }
-        unsigned int getTriangleSize()
+        unsigned int getTriangleSize() noexcept
         {
             return trianglesSize;
         }
     };
     struct FileError : public std::exception {
         std::filesystem::path path;
-        FileError(std::filesystem::path path, const char* msg = "FileError")
+        FileError(std::filesystem::path path, const char* msg = "FileError") noexcept
             : std::exception(msg)
             , path(path)
         {
         }
 
       public:
-        std::filesystem::path getPath()
+        std::filesystem::path getPath() noexcept
         {
             return path;
         }
