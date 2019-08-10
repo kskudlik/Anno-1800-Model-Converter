@@ -14,16 +14,17 @@ class RDMFile
     std::string verticesToOBJ() noexcept;
     static void convertDirectoryToOBJ(std::filesystem::path inputDirectory,
                                       std::filesystem::path outputDirectory);
-
-  private:
     struct UnsupportedVertexFormat : public std::exception {
-        unsigned int verticesSize;
-        unsigned int trianglesSize;
+        std::filesystem::path path;
+        unsigned int          verticesSize;
+        unsigned int          trianglesSize;
         UnsupportedVertexFormat(uint32_t vertexSize, uint32_t triangleSize,
-                                const char* msg = "UnsupportedVertexFormat") noexcept
+                                std::filesystem::path path,
+                                const char*           msg = "UnsupportedVertexFormat") noexcept
             : std::exception(msg)
             , verticesSize(vertexSize)
             , trianglesSize(triangleSize)
+            , path(path)
         {
         }
 
@@ -35,6 +36,10 @@ class RDMFile
         unsigned int getTriangleSize() noexcept
         {
             return trianglesSize;
+        }
+        std::filesystem::path getPath() noexcept
+        {
+            return path;
         }
     };
     struct FileError : public std::exception {
@@ -51,6 +56,15 @@ class RDMFile
             return path;
         }
     };
+    uint32_t getVerticesCount() const
+    {
+        return verticesCount;
+    }
+    uint32_t getTrianglesCount() const
+    {
+        return trianglesCount;
+    }
+  private:
     std::unique_ptr<char[]> file;
     uint32_t                verticesSize; // byte size
     uint32_t                verticesCount;

@@ -16,6 +16,7 @@ steps:
 - task: NuGetCommand@2
   inputs:
     restoreSolution: '$(solution)'
+
 - task: VSBuild@1
   inputs:
     platform: 'x64'
@@ -30,6 +31,7 @@ steps:
       !**\*TestAdapter.dll
       !**\obj\**
     searchFolder: '$(System.DefaultWorkingDirectory)'
+
 - task: ArchiveFiles@2
   displayName: 'Archive x64'
   inputs:

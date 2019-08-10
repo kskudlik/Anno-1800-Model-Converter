@@ -44,7 +44,8 @@ int main(int argc, char* argv)
         system("pause");
         return EXIT_FAILURE;
     }
-
+    RDMFile::convertDirectoryToOBJ("..\\Unit-Tests\\rdm-files\\",
+                                  "..\\Unit-Tests\\rdm-files\\output\\");
     return EXIT_SUCCESS;
 
     //spdlog::trace("TRACE");

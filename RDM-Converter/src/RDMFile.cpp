@@ -78,7 +78,7 @@ RDMFile::RDMFile(std::filesystem::path inputPath)
                 vertices = reinterpret_cast<P3f_N3b_49_T2f*>(&file[offsetToVertices]);
             } break;
             default:
-                throw UnsupportedVertexFormat(verticesSize, trianglesSize);
+                throw UnsupportedVertexFormat(verticesSize, trianglesSize, inputPath);
                 break;
         }
 
