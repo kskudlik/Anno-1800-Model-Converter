@@ -3,7 +3,12 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
-namespace Log
+class Log
 {
-void initSPDLOG(const char* logfile);
-} // namespace Log
+  public:
+    Log(const char* logfile);
+    ~Log();
+
+  private:
+    const char* logfile;
+};

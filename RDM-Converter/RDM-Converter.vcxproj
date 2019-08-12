@@ -190,6 +190,7 @@
   <ItemGroup>
     <ClCompile Include="src\Half.cpp" />
     <ClCompile Include="src\Log.cpp" />
+    <ClCompile Include="src\OBJFile.cpp" />
     <ClCompile Include="src\RDMFile.cpp" />
     <ClCompile Include="src\Triangle.cpp" />
     <ClCompile Include="src\VertexComponents.cpp" />
@@ -197,8 +198,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Half.h" />
+    <ClInclude Include="include\OBJFile.h" />
     <ClInclude Include="include\RDM-Converter.h" />
     <ClInclude Include="include\RDMFile.h" />
+    <ClInclude Include="include\RDMFrame.h" />
     <ClInclude Include="include\VertexComponents.h" />
     <ClInclude Include="include\VertexData.h" />
     <ClInclude Include="include\Log.h" />

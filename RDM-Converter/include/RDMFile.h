@@ -1,15 +1,32 @@
 #pragma once
 #include "Triangle.h"
 #include "VertexData.h"
+#include "OBJFile.h"
 
 #include <filesystem>
 #include <variant>
+#include <vector>
+#include <fstream>
+#include <map>
+#include <sstream>
 
 class RDMFile
 {
   public:
     RDMFile(std::filesystem::path inputPath);
+    RDMFile(OBJFile& obj);
+    RDMFile(uint32_t verticesSize, uint32_t verticesCount, P4h_N4b_G4b_B4b_T2h* vertices,
+            uint32_t trianglesSize, uint32_t trianglesCount, Triangle<uint16_t>* triangles)
+        : verticesSize(verticesSize)
+        , verticesCount(verticesCount)
+        , vertices(vertices)
+        , trianglesSize(trianglesSize)
+        , trianglesCount(trianglesCount)
+        , triangles(triangles)
+    {
+    }
     bool        toOBJFile(std::filesystem::path outputPath);
+    bool        toFile(std::filesystem::path outputPath, const char* versionTag = "n.a.n");
     std::string trianglesToOBJ();
     std::string verticesToOBJ() noexcept;
     static void convertDirectoryToOBJ(std::filesystem::path inputDirectory,
@@ -64,6 +81,7 @@ class RDMFile
     {
         return trianglesCount;
     }
+
   private:
     std::unique_ptr<char[]> file;
     uint32_t                verticesSize; // byte size

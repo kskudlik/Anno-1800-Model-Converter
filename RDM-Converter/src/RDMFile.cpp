@@ -1,9 +1,7 @@
 #include "RDMFile.h"
 #include "Log.h"
 #include "VertexData.h"
-
-#include <fstream>
-#include <variant>
+#include "RDMFrame.h"
 
 template <class... Ts> struct overloaded : Ts... {
     using Ts::operator()...;
@@ -83,6 +81,7 @@ RDMFile::RDMFile(std::filesystem::path inputPath)
         }
 
         triangles = (Triangle<uint16_t>*)&file[offsetToTriangles];
+        RDM.close();
 
     } else {
         throw FileError(inputPath, "Can't open file");
@@ -167,3 +166,164 @@ void RDMFile::convertDirectoryToOBJ(std::filesystem::path inputDirectory,
         }
     }
 }
+const GeometricVertex<float> operator+(GeometricVertex<float> const& a,
+                                       GeometricVertex<float> const& b)
+{
+    return {a.x + b.x, a.y + b.y, a.z + b.z};
+}
+const TextureVertex<float> operator+(TextureVertex<float> const& a, TextureVertex<float> const& b)
+{
+    return {a.u + b.u, a.v + b.v};
+}
+BiTangent<float> crossTangents(Normal<float>& nor, Tangent<float>& tan)
+{
+
+    BiTangent<float> biTang;
+    biTang.x = nor.y * tan.z - nor.z * tan.y;
+    biTang.y = nor.z * tan.x - nor.x * tan.z;
+    biTang.z = nor.x * tan.y - nor.y * tan.x;
+    return biTang;
+}
+void genTangents(Triangle<uint32_t>& tri, std::vector<OBJ_Vertex>& ver)
+{
+
+    GeometricVertex<float> deltaV1  = ver[tri.a].v + ver[tri.b].v;
+    GeometricVertex<float> deltaV2  = ver[tri.c].v + ver[tri.b].v;
+    TextureVertex<float>   deltaVt1 = ver[tri.a].vt + ver[tri.b].vt;
+    TextureVertex<float>   deltaVt2 = ver[tri.c].vt + ver[tri.b].vt;
+
+    float r = -1.0F / (deltaVt1.u * deltaVt2.v - deltaVt1.v * deltaVt2.u);
+
+    float x = (deltaV1.x * deltaVt2.v - deltaV2.x * deltaVt1.v) * r;
+    float y = (deltaV1.y * deltaVt2.v - deltaV2.y * deltaVt1.v) * r;
+    float z = (deltaV1.z * deltaVt2.v - deltaV2.z * deltaVt1.v) * r;
+
+    Tangent<float> normTangent = {x, y, z};
+    ver[tri.a].tang            = normTangent;
+    ver[tri.b].tang            = normTangent;
+    ver[tri.c].tang            = normTangent;
+    BiTangent<float> biTang    = crossTangents(ver[tri.b].vn, normTangent);
+    ver[tri.a].biTang          = biTang;
+    ver[tri.b].biTang          = biTang;
+    ver[tri.c].biTang          = biTang;
+}
+RDMFile::RDMFile(OBJFile& obj)
+{
+    std::vector<GeometricVertex<float>>& v  = obj.v;
+    std::vector<Normal<float>>&          vn = obj.vn;
+    std::vector<TextureVertex<float>>&   vt = obj.vt;
+    std::vector<VertexIndice>&           f  = obj.f;
+
+    std::map<std::tuple<uint32_t, uint32_t, uint32_t>, uint32_t> fmap;
+    uint32_t                                                     trianglesValue[3];
+    std::vector<Triangle<uint32_t>>                              rawTriangles;
+    rawTriangles.reserve(f.size());
+    std::vector<OBJ_Vertex> rawVertices;
+    rawVertices.reserve(f.size());
+    std::tuple<uint32_t, uint32_t, uint32_t> t;
+
+    for (VertexIndice& vi : f) {
+
+        t = std::make_tuple(vi.v1, vi.v1n, vi.v1t);
+        if (fmap.count(t) > 0) {
+            trianglesValue[0] = fmap[t];
+        } else {
+            rawVertices.emplace_back(v[vi.v1], vn[vi.v1n], vt[vi.v1t]);
+            trianglesValue[0] = (rawVertices.size() - 1); // TODO bigger than uint16_t!
+            fmap[t]           = trianglesValue[0];
+        }
+
+        t = std::make_tuple(vi.v2, vi.v2n, vi.v2t);
+        if (fmap.count(t) > 0) {
+            trianglesValue[1] = fmap[t];
+        } else {
+            rawVertices.emplace_back(v[vi.v2], vn[vi.v2n], vt[vi.v2t]);
+            trianglesValue[1] = (rawVertices.size() - 1); // TODO bigger than uint16_t!
+            fmap[t]           = trianglesValue[1];
+        }
+
+        t = std::make_tuple(vi.v3, vi.v3n, vi.v3t);
+        if (fmap.count(t) > 0) {
+            trianglesValue[2] = fmap[t];
+        } else {
+            rawVertices.emplace_back(v[vi.v3], vn[vi.v3n], vt[vi.v3t]);
+            trianglesValue[2] = (rawVertices.size() - 1); // TODO bigger than uint16_t!
+            fmap[t]           = trianglesValue[2];
+        }
+
+        rawTriangles.emplace_back(trianglesValue);
+        genTangents(rawTriangles[rawTriangles.size() - 1], rawVertices);
+    }
+
+    if (rawTriangles.size() > 65535) {
+        throw std::exception("more than 65535 faces; not yet implemented");
+    }
+    Triangle<uint16_t>* triangles = new Triangle<uint16_t>[rawTriangles.size()];
+    for (int i = 0; i < rawTriangles.size(); i++) {
+        triangles[i] = rawTriangles[i].toShort();
+    }
+    P4h_N4b_G4b_B4b_T2h* vertices = new P4h_N4b_G4b_B4b_T2h[rawVertices.size()];
+    for (int i = 0; i < rawVertices.size(); i++) {
+
+        vertices[i] = P4h_N4b_G4b_B4b_T2h(
+            GeometricVertex{Half::floatToHalf(rawVertices[i].v.x),
+                            Half::floatToHalf(rawVertices[i].v.y),
+                            Half::floatToHalf(rawVertices[i].v.z)},
+            rawVertices[i].vn.scale(), rawVertices[i].tang.scale(), rawVertices[i].biTang.scale(),
+            TextureVertex{Half::floatToHalf(rawVertices[i].vt.u),
+                          Half::floatToHalf(1.0F - rawVertices[i].vt.v)});
+    } // invert v for rdm
+
+    this->verticesSize   = 24;
+    this->verticesCount  = rawVertices.size();
+    this->vertices       = vertices;
+    this->trianglesSize  = 2;
+    this->trianglesCount = rawTriangles.size();
+    this->triangles      = triangles;
+}
+bool RDMFile::toFile(std::filesystem::path outputPath, const char* versionTag)
+{
+	using namespace RDMFrame;
+
+    char header[sizeof(RDM_HEADER)];
+    char footer[sizeof(RDM_FOOTER)];
+    memcpy(&header, &RDM_HEADER, sizeof(RDM_HEADER));
+    memcpy(&footer, &RDM_FOOTER, sizeof(RDM_FOOTER));
+
+    uint32_t trianglesIndexCount = trianglesCount * 3;
+	uint32_t offsetToTriangles = 661 + (verticesCount * verticesSize);
+    uint32_t offsetToEnd =
+        669 + (verticesCount * verticesSize) + (trianglesSize * trianglesIndexCount);
+
+	memcpy(&header[36], &offsetToEnd, 4);
+    memcpy(&header[317], &offsetToTriangles, 4);
+    memcpy(&header[621], &trianglesIndexCount, 4);
+
+	uint32_t offsetToEndStrings = offsetToEnd + 36;
+    uint32_t offsetToEndString1 = offsetToEndStrings + 56;
+    uint32_t offsetToEndString2 = offsetToEndStrings + 78;
+    memcpy(&footer[8], &offsetToEndStrings, 4);
+    memcpy(&footer[44], &offsetToEndString1, 4);
+    memcpy(&footer[48], &offsetToEndString2, 4);
+    memcpy(&footer[143], &versionTag[0], 5);
+
+    std::ofstream outfile(outputPath, std::ios::out | std::ios::binary);
+
+	outfile.write(header, sizeof(header));
+    outfile.write((const char*)&verticesCount, 4);
+    outfile.write((const char*)&verticesSize, 4);
+    std::visit(overloaded{[this, &outfile](auto* vertices) {
+                   outfile.write((const char*)(&vertices[0]),
+                                 (uint64_t)verticesSize * (uint64_t)verticesCount);
+               }},
+               vertices);
+    outfile.write((const char*)&trianglesIndexCount, 4);
+    outfile.write((const char*)&trianglesSize, 4);
+    outfile.write((const char*)(&triangles[0]),
+                  (uint64_t)trianglesSize * (uint64_t)trianglesIndexCount);
+    outfile.write(footer, sizeof(footer));
+    outfile.close();
+
+    return true; // TODO make this useful
+}
+

@@ -52,6 +52,20 @@ struct P4h_N4b_G4b_B4b_T2h
     BiTangent<uint8_t>        biTang;
     uint8_t                   padding3;
     TextureVertex<uint16_t>   vt;
+    P4h_N4b_G4b_B4b_T2h() {}
+    P4h_N4b_G4b_B4b_T2h(GeometricVertex<uint16_t> v, Normal<uint8_t> vn, Tangent<uint8_t> tang,
+                        BiTangent<uint8_t> biTang, TextureVertex<uint16_t> vt)
+        : padding0(0)
+        , padding1(0)
+        , padding2(0)
+        , padding3(0)
+        , v(v)
+        , vn(vn)
+        , vt(vt)
+        , tang(tang)
+        , biTang(biTang)
+    {
+    }
 };
 
 struct P4h_N4b_G4b_B4b_T2h_I4b

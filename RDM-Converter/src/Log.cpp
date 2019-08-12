@@ -1,7 +1,13 @@
 #include "Log.h"
-namespace Log
+#include <fstream>
+#include <filesystem>
+
+bool is_empty(const char* logfile)
 {
-void initSPDLOG(const char* logfile)
+    std::ifstream pFile(logfile);
+    return pFile.peek() == std::ifstream::traits_type::eof();
+}
+Log::Log(const char* logfile) : logfile(logfile)
 {
 
     auto console_logger = spdlog::stdout_color_mt("console");
@@ -23,4 +29,16 @@ void initSPDLOG(const char* logfile)
 
     console_logger->sinks().push_back(file_sink);
 }
-} // namespace Log
+Log::~Log() {
+    spdlog::shutdown();
+    if (is_empty(this->logfile)) {
+        try {
+            std::filesystem::remove(std::filesystem::path(logfile));
+		} catch(std::filesystem::filesystem_error e) {
+            spdlog::critical("{} at {} ; {} with {} ", e.what(), e.path1().string(), e.path2().string(), e.code().message());
+        }
+
+
+    }
+}
+
