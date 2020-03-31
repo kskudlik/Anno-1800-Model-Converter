@@ -2,6 +2,12 @@
 #include "Half.h"
 #include "VertexComponents.h"
 
+struct Material {
+
+    uint32_t offset;
+    uint32_t size;
+    uint32_t index;
+};
 struct P4h
 // 8
 // e.g

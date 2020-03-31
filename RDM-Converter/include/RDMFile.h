@@ -16,13 +16,17 @@ class RDMFile
     RDMFile(std::filesystem::path inputPath);
     RDMFile(OBJFile& obj);
     RDMFile(uint32_t verticesSize, uint32_t verticesCount, P4h_N4b_G4b_B4b_T2h* vertices,
-            uint32_t trianglesSize, uint32_t trianglesCount, Triangle<uint16_t>* triangles)
+            uint32_t trianglesSize, uint32_t trianglesCount, Triangle<uint16_t>* triangles,
+            uint32_t materialsCount, std::vector<Material> materials)
         : verticesSize(verticesSize)
         , verticesCount(verticesCount)
         , vertices(vertices)
         , trianglesSize(trianglesSize)
         , trianglesCount(trianglesCount)
         , triangles(triangles)
+        , materials(materials)
+        , materialsCount(materialsCount)
+
     {
     }
     bool        toOBJFile(std::filesystem::path outputPath);
@@ -95,4 +99,6 @@ class RDMFile
     uint32_t            trianglesSize;  // byte size
     uint32_t            trianglesCount; // actual amount of triangles (COUNT IN RDM/3)
     Triangle<uint16_t>* triangles;
+    std::vector<Material>           materials;
+    uint32_t            materialsCount;
 };

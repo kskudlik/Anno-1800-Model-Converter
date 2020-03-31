@@ -121,6 +121,7 @@ void convertToRDM(std::filesystem::path inputPath, std::filesystem::path outputP
 
 int main(int argc, char** argv)
 {
+
     Log   log("rdm-converter.log");
     Timer tick;
 

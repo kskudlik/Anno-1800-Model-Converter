@@ -25,14 +25,26 @@ RDMFile::RDMFile(std::filesystem::path inputPath)
 
         const uintptr_t offsetToOffsets = *(uint32_t*)&file[32];
 
+
         if (length - 16 < offsetToOffsets)
             throw FileError(inputPath, "Unknown File Structure");
 
         const uint32_t offsetToVertices  = *(uint32_t*)&file[offsetToOffsets + 12];
         const uint32_t offsetToTriangles = *(uint32_t*)&file[offsetToOffsets + 16];
+        const uint32_t offsetToMaterials = *(uint32_t*)&file[offsetToOffsets + 20];
 
+        if (*(uint32_t*)&file[offsetToMaterials - 4] != 28)
+            throw FileError(inputPath, "Unknown File Structure: Materialsize != 28");
         if (length - 8 <= offsetToVertices || length - 4 <= offsetToTriangles)
             throw FileError(inputPath, "Unknown File Structure");
+
+        materialsCount = *(uint32_t*)&file[offsetToMaterials - 8];
+
+        for (int i = 0; i < materialsCount; i++) {
+            materials.push_back(Material{*(uint32_t*)&file[offsetToMaterials + 28 * i],
+                                         *(uint32_t*)&file[offsetToMaterials + 4 + 28 * i],
+                                         *(uint32_t*)&file[offsetToMaterials + 8 + 28 * i]});
+        }
 
         verticesSize  = *(uint32_t*)&file[offsetToVertices - 4];
         verticesCount = *(uint32_t*)&file[offsetToVertices - 8];
@@ -123,14 +135,26 @@ std::string RDMFile::trianglesToOBJ()
         normals = false;
     if (std::holds_alternative<P4h*>(vertices))
         textures = false;
+    int materialIndex = 0;
     if (trianglesSize == 4) {
         Triangle<uint32_t>* triangles = (Triangle<uint32_t>*)this->triangles;
         for (uint32_t i = 0; i < trianglesCount; i++) {
+            if ((materials[materialIndex].offset / 3) == i) {
+                out += "g " + std::to_string(materials[materialIndex].index) + "\n" + "usemtl "
+                       + std::to_string(materials[materialIndex].index) + "\n";
+                materialIndex++;
+            }
+
             out += triangles[i].toOBJ(normals, textures);
         }
     } else if (trianglesSize == 2) {
         Triangle<uint16_t>* triangles = (Triangle<uint16_t>*)this->triangles;
         for (uint32_t i = 0; i < trianglesCount; i++) {
+            if ((materials[materialIndex].offset / 3) == i) {
+                out += "g " + std::to_string(materials[materialIndex].index) + "\n" + "usemtl "
+                       + std::to_string(materials[materialIndex].index) + "\n";
+                materialIndex++;
+            }
             out += triangles[i].toOBJ(normals, textures);
         }
     } else {
@@ -187,10 +211,20 @@ BiTangent<float> crossTangents(Normal<float>& nor, Tangent<float>& tan)
 void genTangents(Triangle<uint32_t>& tri, std::vector<OBJ_Vertex>& ver)
 {
 
-    GeometricVertex<float> deltaV1  = ver[tri.a].v + ver[tri.b].v;
-    GeometricVertex<float> deltaV2  = ver[tri.c].v + ver[tri.b].v;
-    TextureVertex<float>   deltaVt1 = ver[tri.a].vt + ver[tri.b].vt;
-    TextureVertex<float>   deltaVt2 = ver[tri.c].vt + ver[tri.b].vt;
+    //GeometricVertex<float> deltaV1  = ver[tri.a].v + ver[tri.b].v;
+    GeometricVertex<float> deltaV1 =
+        GeometricVertex<float>{ver[tri.a].v.x - ver[tri.b].v.x, ver[tri.a].v.y - ver[tri.b].v.y,
+                               ver[tri.a].v.z - ver[tri.b].v.z};
+    // GeometricVertex<float> deltaV2  = ver[tri.c].v + ver[tri.b].v;
+    GeometricVertex<float> deltaV2 =
+        GeometricVertex<float>{ver[tri.c].v.x - ver[tri.b].v.x, ver[tri.c].v.y - ver[tri.b].v.y,
+                               ver[tri.c].v.z - ver[tri.b].v.z};
+    //TextureVertex<float>   deltaVt1 = ver[tri.a].vt + ver[tri.b].vt;
+    TextureVertex<float> deltaVt1 =
+        TextureVertex<float>{ver[tri.a].vt.u - ver[tri.b].vt.u, ver[tri.a].vt.u - ver[tri.b].vt.v};
+    //TextureVertex<float>   deltaVt2 = ver[tri.c].vt + ver[tri.b].vt;
+    TextureVertex<float> deltaVt2 =
+        TextureVertex<float>{ver[tri.c].vt.u - ver[tri.b].vt.u, ver[tri.c].vt.v - ver[tri.b].vt.v};
 
     float r = -1.0F / (deltaVt1.u * deltaVt2.v - deltaVt1.v * deltaVt2.u);
 
